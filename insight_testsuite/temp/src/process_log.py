@@ -13,8 +13,10 @@ import time, sys
 # Recursive algorithm to determine the Dth degree friends of a given customer (c_obj)
 # ----------------------------------------------------------
 def track_network_friends(d, c_obj, c_obj_dict, network_f_ids):
-    #if c_obj.id not in network_f_ids:
-    #    network_f_ids.append(c_obj.id)
+
+    # The 'if statement' below will include the current customer in the mean and sd calc.
+    if c_obj.id not in network_f_ids:
+        network_f_ids.append(c_obj.id)
 
     if d == 1:
         for id in c_obj.friend_ids :
@@ -37,18 +39,19 @@ def get_network_purchases(network_f_ids, c_obj_dict, network_p_ids):
 # ----------------------------------------------------------
 # Function to Process Batch data
 # ----------------------------------------------------------
+#@profile
 def processBatchLogFile():
 
     # Opening log files
-    #data_file = open('../sample_dataset/batch_log.json')
     try:
-        # If running ./run.sh under 'anolamy_dection' directoru from command line, use the two lines below
+        # If running ./run.sh under 'anolamy_dection' directory from command line, use the two lines below
         data_file = open('log_input/batch_log.json')
         output_file = open('log_output/flagged_purchases.json', "w")
     except:
         # If running the code in an IDE like PyCharm, use the two lines below to load file
         data_file = open('../log_input/batch_log.json')
         output_file = open('../log_output/flagged_purchases.json', "w")
+        #data_file = open('../sample_dataset/batch_log.json')
 
     # Reading first line of .json data file
     jd = json.loads(data_file.readline())
@@ -105,11 +108,8 @@ def processBatchLogFile():
                 purchase[p_id] = (jd['timestamp'], amount)
 
                 c_id = jd['id']
-                if customer.get(c_id) is not None:
-                    customer[c_id].update_purchases(p_id, T)
-                else:
+                if customer.get(c_id) is None:
                     customer[c_id] = Customer(c_id)
-                    customer[c_id].update_purchases(p_id, T)
 
                 #list1 = []
                 #network_f_ids = []
@@ -130,7 +130,7 @@ def processBatchLogFile():
                         network_purchases[l] = purchase[l]
 
                 if len(network_purchases) > 1:
-                    #t0 = time.time()c
+                    #t0 = time.time()
                     # Calculating mean purchase amount for the latest T transactions in the network
                     n = 0
                     sum_x1 = 0
@@ -163,13 +163,16 @@ def processBatchLogFile():
                     if float(amount) > mean + (3 * sd) :
                         jd['mean'] = '{0:.2f}'.format(mean)
                         jd['sd'] = '{0:.2f}'.format(sd)
-                        output_file.write(str(json.dumps(jd)) + '\n')
-                        print('\nAnomalous purchase --> ' + str(json.dumps(jd)) + '\n')
+                        #output_file.write(str(json.dumps(jd)) + '\n')
+                        #print('Anomalous purchase --> ' + str(json.dumps(jd)) + '\n')
 
                 # Ensuring we don't run out of integers to represent p_id
                 if p_id > 9223372036854775800:
                     p_id = 0
                     print('here')
+
+                # Updating current customer purchase after anomaly check
+                customer[c_id].update_purchases(p_id, T)
 
                 #print('mean =', mean, 'sd = ', sd)
 
@@ -206,8 +209,6 @@ def processBatchLogFile():
 # ----------------------------------------------------------
 def processStreamLog(customer, purchase, p_id, D, T):
     # Opening log files
-    #data_file = open('../sample_dataset/stream_log.json')
-
     try:
         # If running ./run.sh under 'anolamy_dection' directoru from command line, use the two lines below
         data_file = open('log_input/stream_log.json')
@@ -216,6 +217,7 @@ def processStreamLog(customer, purchase, p_id, D, T):
         # If running the code in an IDE like PyCharm, use the two lines below to load file
         data_file = open('../log_input/stream_log.json')
         output_file = open('../log_output/flagged_purchases.json', "a")
+        #data_file = open('../sample_dataset/stream_log.json')
 
     # Reading remaining lines of .json data file
     data_stream = data_file.readlines()
@@ -261,11 +263,9 @@ def processStreamLog(customer, purchase, p_id, D, T):
                 purchase[p_id] = (jd['timestamp'], amount)
 
                 c_id = jd['id']
-                if customer.get(c_id) is not None:
-                    customer[c_id].update_purchases(p_id, T)
-                else:
+                if customer.get(c_id) is None:
                     customer[c_id] = Customer(c_id)
-                    customer[c_id].update_purchases(p_id, T)
+
 
                 # Obtaining network friend ids (network_f_ids) of the Dth degree for customer with id (c_id)
                 network_f_ids = []
@@ -310,12 +310,15 @@ def processStreamLog(customer, purchase, p_id, D, T):
                         jd['mean'] = '{0:.2f}'.format(mean)
                         jd['sd'] = '{0:.2f}'.format(sd)
                         output_file.write(str(json.dumps(jd)) + '\n')
-                        print('\nAnomalous purchase --> ' + str(json.dumps(jd)))
+                        print('Anomalous purchase --> ' + str(json.dumps(jd)))
 
                 # Ensuring we don't run out of integers to represent p_id
                 if p_id > 9223372036854775800:
                     p_id = 0
                     print('here*******')
+
+                # Updating current customer purchase after anomaly check
+                customer[c_id].update_purchases(p_id, T)
 
             else:
                 return 1
@@ -328,7 +331,7 @@ def processStreamLog(customer, purchase, p_id, D, T):
     #print(network_f_ids)
     #print(network_p_ids)
     output_file.close()
-    return
+    return 0
 
 
 
@@ -338,21 +341,19 @@ def processStreamLog(customer, purchase, p_id, D, T):
 #@profile
 def main():
 
-    #%load_ext memory_profiler
-    #%load_ext line_profiler
-
     t0 = time.time()
-    print('\n-------------------------\nProcessing batch file ...\n-------------------------')
+    print('\n--------------------------\nProcessing batch file ...\n--------------------------')
     customer, purchase, p_id, D, T = processBatchLogFile()
     t1 = time.time()
     print('\n--------------------------\nProcessing stream file ...\n--------------------------')
     processStreamLog(customer, purchase, p_id, D, T)
     t2 = time.time()
     print('\n--------------------------\nDone !!!!!!!!!!!!!!!!!!!!!\n--------------------------')
-    print('\nBatch log processing --> {} secs'
+    print('\nBatch log processing ---> {} secs'
           '\nStream log processing --> {} secs'
           '\nTotal processing time --> {} secs'.format(t1-t0, t2-t1, t2-t0))
     return 0
+
 # ----------------------------------------------------------
 # __name__
 # ----------------------------------------------------------

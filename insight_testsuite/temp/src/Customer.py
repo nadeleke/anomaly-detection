@@ -16,7 +16,6 @@ class Customer():
         self.friend_ids.remove(friend_id)
 
     def update_purchases(self, p_id, T):
+        if len(self.purchase_ids) >= T:
+            self.purchase_ids.pop(0)
         self.purchase_ids.append(p_id)
-        if len(self.purchase_ids) > T:
-            #print(self.purchase_ids)
-            del self.purchase_ids[0]

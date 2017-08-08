@@ -15,8 +15,8 @@ import time, sys
 def track_network_friends(d, c_obj, c_obj_dict, network_f_ids):
 
     # The 'if statement' below will include the current customer in the mean and sd calc.
-    #if c_obj.id not in network_f_ids:
-    #    network_f_ids.append(c_obj.id)
+    if c_obj.id not in network_f_ids:
+        network_f_ids.append(c_obj.id)
 
     if d == 1:
         for id in c_obj.friend_ids :
@@ -44,7 +44,7 @@ def processBatchLogFile():
 
     # Opening log files
     try:
-        # If running ./run.sh under 'anolamy_dection' directoru from command line, use the two lines below
+        # If running ./run.sh under 'anolamy_dection' directory from command line, use the two lines below
         data_file = open('log_input/batch_log.json')
         output_file = open('log_output/flagged_purchases.json', "w")
     except:
@@ -108,11 +108,8 @@ def processBatchLogFile():
                 purchase[p_id] = (jd['timestamp'], amount)
 
                 c_id = jd['id']
-                if customer.get(c_id) is not None:
-                    customer[c_id].update_purchases(p_id, T)
-                else:
+                if customer.get(c_id) is None:
                     customer[c_id] = Customer(c_id)
-                    customer[c_id].update_purchases(p_id, T)
 
                 #list1 = []
                 #network_f_ids = []
@@ -173,6 +170,9 @@ def processBatchLogFile():
                 if p_id > 9223372036854775800:
                     p_id = 0
                     print('here')
+
+                # Updating current customer purchase after anomaly check
+                customer[c_id].update_purchases(p_id, T)
 
                 #print('mean =', mean, 'sd = ', sd)
 
@@ -263,11 +263,9 @@ def processStreamLog(customer, purchase, p_id, D, T):
                 purchase[p_id] = (jd['timestamp'], amount)
 
                 c_id = jd['id']
-                if customer.get(c_id) is not None:
-                    customer[c_id].update_purchases(p_id, T)
-                else:
+                if customer.get(c_id) is None:
                     customer[c_id] = Customer(c_id)
-                    customer[c_id].update_purchases(p_id, T)
+
 
                 # Obtaining network friend ids (network_f_ids) of the Dth degree for customer with id (c_id)
                 network_f_ids = []
@@ -318,6 +316,9 @@ def processStreamLog(customer, purchase, p_id, D, T):
                 if p_id > 9223372036854775800:
                     p_id = 0
                     print('here*******')
+
+                # Updating current customer purchase after anomaly check
+                customer[c_id].update_purchases(p_id, T)
 
             else:
                 return 1
